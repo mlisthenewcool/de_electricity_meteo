@@ -1,0 +1,27 @@
+[project]
+name = "de-electricity-meteo"
+version = "2025.12"
+description = "DE personnal project"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiofiles>=25.1.0",
+    "aiohttp>=3.13.2",
+    "python-json-logger>=4.0.0",
+    "pyyaml>=6.0.3",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.5.1",
+    "ruff>=0.14.10",
+    "ty>=0.0.8",
+]
+
+[tool.ruff.lint]
+select = [
+    "I", # isort
+    "E", "W", # pycodestyle,
+    "F", # pyflakes
+    "PL", # pylint
+]
