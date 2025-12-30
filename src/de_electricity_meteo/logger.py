@@ -11,7 +11,7 @@ from de_electricity_meteo.enums import LoggerChoice
 
 
 @lru_cache(maxsize=1)
-def _load_config(path: Path) -> None:
+def load_config(path: Path) -> None:
     """
     Loads the logging configuration from a YAML file.
     The @lru_cache decorator ensures the file is read and parsed only once.
@@ -31,7 +31,7 @@ def _load_config(path: Path) -> None:
         raise FileNotFoundError(f"Logging configuration file not found at: {path}")
 
     try:
-        with open(path, mode="rt", encoding="utf-8") as f:
+        with path.open(mode="rt", encoding="utf-8") as f:
             config = yaml.safe_load(f)
             logging.config.dictConfig(config)
     except yaml.YAMLError as yaml_error:
@@ -40,7 +40,7 @@ def _load_config(path: Path) -> None:
         raise RuntimeError(f"Unexpected error loading logging config: {general_error}")
 
 
-def _is_logger_name_defined(name: str) -> bool:
+def is_logger_name_defined(name: str) -> bool:
     """
     Checks if a specific logger name exists in the logging manager's registry.
     This prevents instantiating a default logger if it wasn't defined in the YAML.
@@ -72,7 +72,7 @@ def get_safe_logger(config_path: Path, name: LoggerChoice) -> logging.Logger:
             or if the YAML is invalid.
         RuntimeError: If configuration fails unexpectedly.
     """
-    _load_config(path=config_path)
+    load_config(path=config_path)
 
     # to choose a specific handler in Python code
     # handler = logging.getHandlerByName(x)
@@ -81,7 +81,7 @@ def get_safe_logger(config_path: Path, name: LoggerChoice) -> logging.Logger:
     #   logger.addHandler(handler)
 
     logger_name_as_str = name.value
-    if _is_logger_name_defined(logger_name_as_str):
+    if is_logger_name_defined(logger_name_as_str):
         return logging.getLogger(logger_name_as_str)
 
     raise ValueError(

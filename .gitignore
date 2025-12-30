@@ -4,10 +4,8 @@
 docker/secrets/*
 !docker/secrets/.gitkeep
 
-data/*
-!data/bronze/.gitkeep
-!data/silver/.gitkeep
-!data/gold/.gitkeep
+data/**
+!data/**/.gitkeep
 
 .idea/
 
