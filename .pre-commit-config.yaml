@@ -1,15 +1,44 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.10
+  - repo: local
     hooks:
-      # Run the linter
       - id: ruff-check
-        args: [--fix]
-        files: ^src/
-      # Run the formatter
-      - id: ruff-format
-        args: []
+        name: ruff-check
+        entry: uv run ruff check
+        args: [ --fix ]
+        language: system
+        types: [ python ]
+        pass_filenames: false
         files: ^src/
 
-  # https://github.com/astral-sh/ty/issues/269
-  # to add "ty" to pre-commit
+      - id: ruff-format
+        name: ruff-format
+        entry: uv run ruff format
+        language: system
+        types: [ python ]
+        pass_filenames: false
+        files: ^src/
+
+      - id: ty
+        name: ty
+        entry: uv run ty
+        language: system
+        types: [ python ]
+        pass_filenames: false
+        files: ^src/
+
+
+
+#  - repo: https://github.com/astral-sh/ruff-pre-commit
+#    rev: v0.14.10
+#    hooks:
+#      # Run the linter
+#      - id: ruff-check
+#        args: [--fix]
+#        files: ^src/
+#      # Run the formatter
+#      - id: ruff-format
+#        args: []
+#        files: ^src/
+#
+#  # https://github.com/astral-sh/ty/issues/269
+#  # to add "ty" to pre-commit
