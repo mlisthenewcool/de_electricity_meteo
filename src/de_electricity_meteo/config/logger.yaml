@@ -2,11 +2,11 @@ version: 1
 disable_existing_loggers: true
 formatters:
   json:
-    class: pythonjsonlogger.jsonlogger.JsonFormatter
+    class: pythonjsonlogger.json.JsonFormatter
     format: "%(asctime)s %(levelname)s %(name)s %(message)s"
-#    rename_fields:
-#      levelname: "level"
-#      asctime: "timestamp"
+  #    rename_fields:
+  #      levelname: "level"
+  #      asctime: "timestamp"
 
   standard:
     format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -28,15 +28,15 @@ handlers:
 #    encoding: utf8
 
 loggers:
-#  jsonFileLogger:
-#    level: DEBUG
-#    handlers: [file]
-#    # propagate: no
+  #  jsonFileLogger:
+  #    level: DEBUG
+  #    handlers: [file]
+  #    # propagate: no
 
   jsonConsoleLogger:
     level: DEBUG
-    handlers: [console]
+    handlers: [ console ]
 
 root:
   level: NOTSET
-  handlers: []
+  handlers: [ ]

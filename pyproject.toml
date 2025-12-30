@@ -1,7 +1,7 @@
 [project]
 name = "de-electricity-meteo"
 version = "2025.12"
-description = "DE personnal project"
+description = "Data Engineering personnal project"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -17,6 +17,9 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pre-commit>=4.5.1",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
     "ruff>=0.14.10",
     "ty>=0.0.8",
 ]
@@ -32,8 +35,21 @@ select = [
 [tool.ty.src]
 include = ["src", "tests"]
 
-#[tool.uv.environments]
-#"PYTHONPATH=src"
-
 [tool.marimo.runtime]
 pythonpath = ["src"]    # needed to use absolute imports inside notebooks
+
+[tool.pytest.ini_options]
+addopts = "--cov=de_electricity_meteo --cov-report=term-missing --cov-report=html"
+pythonpath = ["src"]
+# testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true   # check if all branches of if/else statement are used
+# source = ["de_electricity_meteo"]
+
+[tool.coverage.report]
+# fail_under = 90
+show_missing = true
+exclude_also = [
+    'if __name__ == .__main__.:'
+]
