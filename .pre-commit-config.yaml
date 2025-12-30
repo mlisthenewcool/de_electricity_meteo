@@ -7,11 +7,11 @@ repos:
         args: [ --fix, --force-exclude ]
         language: system
         types: [ python ]
-        # files: ^(src|tests)/       # hook triggered only if a change occurs in those
+        # files: ^(src|tests)/
 
       - id: ruff-format
         name: ruff-format
-        entry: uv run ruff format src tests
+        entry: uv run ruff format
         language: system
         types: [ python ]
         # files: ^(src|tests)/

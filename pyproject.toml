@@ -25,8 +25,13 @@ dev = [
 ]
 
 [tool.ruff]
-src = ["src", "tests"]
+#src = ["src", "tests"]
 line-length = 88
+include = [
+    "src/**/*.py",
+    "tests/**/*.py"
+]
+extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
 select = [
@@ -40,6 +45,7 @@ fixable = ["ALL"]
 
 [tool.ty.src]
 include = ["src", "tests"]
+exclude = ["notebooks"]
 
 [tool.marimo.runtime]
 pythonpath = ["src"]    # needed to use absolute imports inside notebooks
@@ -47,14 +53,14 @@ pythonpath = ["src"]    # needed to use absolute imports inside notebooks
 [tool.pytest.ini_options]
 addopts = "--cov=de_electricity_meteo --cov-report=term-missing --cov-report=html"
 pythonpath = ["src"]
-# testpaths = ["tests"]
+#testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true   # check if all branches of if/else statement are used
-# source = ["de_electricity_meteo"]
+#source = ["de_electricity_meteo"]
 
 [tool.coverage.report]
-# fail_under = 90
+#fail_under = 90
 show_missing = true
 exclude_also = [
     'if __name__ == .__main__.:'
