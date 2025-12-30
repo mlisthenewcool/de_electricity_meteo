@@ -7,6 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "aiofiles>=25.1.0",
     "aiohttp>=3.13.2",
+    "marimo[recommended]>=0.18.4",
+    "polars>=1.36.1",
+    "psycopg[binary]>=3.3.2",
     "python-json-logger>=4.0.0",
     "pyyaml>=6.0.3",
 ]
@@ -25,3 +28,9 @@ select = [
     "F", # pyflakes
     "PL", # pylint
 ]
+
+#[tool.uv.environments]
+#"PYTHONPATH=src"
+
+[tool.marimo.runtime]
+pythonpath = ["src"]

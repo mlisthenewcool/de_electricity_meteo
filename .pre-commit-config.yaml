@@ -5,8 +5,11 @@ repos:
       # Run the linter
       - id: ruff-check
         args: [--fix]
+        files: ^src/
       # Run the formatter
       - id: ruff-format
+        args: []
+        files: ^src/
 
   # https://github.com/astral-sh/ty/issues/269
   # to add "ty" to pre-commit
