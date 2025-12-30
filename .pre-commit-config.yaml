@@ -7,21 +7,23 @@ repos:
         args: [ --fix, --force-exclude ]
         language: system
         types: [ python ]
-        # files: ^(src|tests)/
 
       - id: ruff-format
         name: ruff-format
         entry: uv run ruff format
         language: system
         types: [ python ]
-        # files: ^(src|tests)/
 
       - id: ty
         name: ty
         entry: uv run ty check
         language: system
         types: [ python ]
-        # files: ^(src|tests)/
+
+        # hack: 'exclude' in pyproject.toml is somehow not read
+        # better than 'pass_filenames: false' for performance
+        # preventing pre-commit to check the whole project everytime
+        files: ^(src|tests)/
 
 
 
