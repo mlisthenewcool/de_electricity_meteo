@@ -38,8 +38,11 @@ jobs:
         run: uv run ty check
 
       - name: Test coverage (pytest)
+        env:
+          # Override pytest-cov settings (in pyproject.toml) for a cleaner CI summary
+          PYTEST_ADDOPTS: "--cov-report=term-missing:skip-covered"
         run: |
           echo "### Test coverage summary" >> $GITHUB_STEP_SUMMARY
           echo '```text' >> $GITHUB_STEP_SUMMARY
-          uv run pytest --cov-report=term >> $GITHUB_STEP_SUMMARY
+          uv run pytest >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
