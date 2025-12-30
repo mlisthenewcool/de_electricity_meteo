@@ -3,28 +3,25 @@ repos:
     hooks:
       - id: ruff-check
         name: ruff-check
-        entry: uv run ruff check src tests
+        entry: uv run ruff check
         args: [ --fix, --force-exclude ]
         language: system
         types: [ python ]
-        pass_filenames: false      # not needed since we pass 'src' to entry
-        files: ^(src|tests)/       # hook triggered only if a change occurs in this
+        # files: ^(src|tests)/       # hook triggered only if a change occurs in those
 
       - id: ruff-format
         name: ruff-format
         entry: uv run ruff format src tests
         language: system
         types: [ python ]
-        pass_filenames: false
-        files: ^(src|tests)/
+        # files: ^(src|tests)/
 
       - id: ty
         name: ty
         entry: uv run ty check
         language: system
         types: [ python ]
-        pass_filenames: false
-        files: ^(src|tests)/
+        # files: ^(src|tests)/
 
 
 

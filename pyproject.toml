@@ -24,13 +24,19 @@ dev = [
     "ty>=0.0.8",
 ]
 
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 88
+
 [tool.ruff.lint]
 select = [
     "I", # isort
     "E", "W", # pycodestyle,
     "F", # pyflakes
     "PL", # pylint
+    "NPY", # numpy
 ]
+fixable = ["ALL"]
 
 [tool.ty.src]
 include = ["src", "tests"]
