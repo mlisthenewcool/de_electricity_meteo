@@ -51,12 +51,13 @@ exclude = ["notebooks"]
 pythonpath = ["src"]    # needed to use absolute imports inside notebooks
 
 [tool.pytest.ini_options]
-addopts = "--cov=de_electricity_meteo --cov-report=term-missing --cov-report=html"
+addopts = "--cov=de_electricity_meteo --cov-report=term-missing --cov-report=html:tests/htmlcov"
 pythonpath = ["src"]
 #testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true   # check if all branches of if/else statement are used
+data_file = "tests/.coverage"
 #source = ["de_electricity_meteo"]
 
 [tool.coverage.report]
