@@ -29,8 +29,11 @@ select = [
     "PL", # pylint
 ]
 
+[tool.ty.src]
+include = ["src", "tests"]
+
 #[tool.uv.environments]
 #"PYTHONPATH=src"
 
 [tool.marimo.runtime]
-pythonpath = ["src"]
+pythonpath = ["src"]    # needed to use absolute imports inside notebooks

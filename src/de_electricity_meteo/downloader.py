@@ -30,7 +30,7 @@ def stream_retry(
                             url,
                             timeout=aiohttp.ClientTimeout(
                                 total=None, sock_read=300
-                            ),  # todo: ?
+                            ),  # todo: check why we need a timeout
                         ) as response:
                             response.raise_for_status()
 
@@ -63,7 +63,7 @@ def stream_retry(
                     await asyncio.sleep(current_delay)
                     current_delay *= backoff_factor
 
-            raise last_exception
+            raise last_exception  # ty:ignore[invalid-raise]
 
         return wrapper
 

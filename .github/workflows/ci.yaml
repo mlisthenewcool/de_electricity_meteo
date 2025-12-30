@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  lint-format-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # https://github.com/actions/setup-python
+      # https://docs.astral.sh/uv/guides/integration/github/#setting-up-python
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: ".python-version"
+
+      # https://github.com/astral-sh/setup-uv
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync # --frozen
+
+      - name: Run ruff check (linter)
+        run: uv run ruff check --output-format=github src tests
+
+      - name: Run ruff format
+        run: uv run ruff format --check src tests
+
+      - name: Run Ty (Type checking)
+        run: uv run ty check
