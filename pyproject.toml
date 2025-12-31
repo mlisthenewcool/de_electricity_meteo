@@ -42,7 +42,7 @@ select = [
     "D", # pydocstyle
     "NPY", # numpy
 ]
-ignore = ["D100"]
+ignore = ["D100", "D101", "D104"]
 fixable = ["ALL"]
 
 [tool.ruff.lint.pydocstyle]
