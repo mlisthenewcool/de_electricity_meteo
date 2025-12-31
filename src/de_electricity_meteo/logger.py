@@ -12,15 +12,13 @@ from de_electricity_meteo.enums import LoggerChoice
 
 @lru_cache(maxsize=1)
 def load_config(path: Path) -> None:
-    """
-    Loads the logging configuration from a YAML file.
-    The @lru_cache decorator ensures the file is read and parsed only once.
+    """Loads the logging configuration from a YAML file.
+
+    The @lru_cache decorator ensures the file is read and parsed only once
+    during the application lifecycle to optimize performance.
 
     Args:
-        path (Path): The filesystem path to the YAML configuration file.
-
-    Returns:
-        None
+        path: The filesystem path to the YAML configuration file.
 
     Raises:
         FileNotFoundError: If the provided path does not exist.
@@ -41,33 +39,33 @@ def load_config(path: Path) -> None:
 
 
 def is_logger_name_defined(name: str) -> bool:
-    """
-    Checks if a specific logger name exists in the logging manager's registry.
-    This prevents instantiating a default logger if it wasn't defined in the YAML.
+    """Checks if a specific logger name exists in the logging manager's registry.
+
+    This prevents instantiating a default logger if it wasn't explicitly
+    defined in the YAML configuration.
 
     Args:
-        name (str): The string name of the logger to check.
+        name: The string name of the logger to check in the registry.
 
     Returns:
-        bool: True if the logger name is defined in the registry, False otherwise.
+        True if the logger name is defined in the registry, False otherwise.
     """
     # logging.root.manager.loggerDict contains all instantiated loggers (except root)
     return name in logging.Logger.manager.loggerDict
 
 
 def get_safe_logger(config_path: Path, name: LoggerChoice) -> logging.Logger:
-    """
-    Retrieves a configured logger instance after ensuring the configuration is loaded.
+    """Retrieves a configured logger instance after ensuring the configuration is loaded.
 
     Args:
-        config_path (Path): Path to the YAML configuration file.
-        name (LoggerChoice): The Enum member representing the desired logger.
+        config_path: Path to the YAML configuration file.
+        name: The Enum member representing the desired logger from LoggerChoice.
 
     Returns:
-        logging.Logger: The initialized and configured logger object.
+        The initialized and configured logger object.
 
     Raises:
-        FileNotFoundError: If the config file is missing (via _load_config).
+        FileNotFoundError: If the config file is missing (via load_config).
         ValueError: If the logger name is not found in the loaded configuration
             or if the YAML is invalid.
         RuntimeError: If configuration fails unexpectedly.

@@ -18,9 +18,7 @@ from de_electricity_meteo.logger import (
 
 @pytest.fixture(autouse=True)
 def reset_lru_cache() -> Generator[None, None, None]:
-    """
-    Fixture to clear the LRU cache before each test to ensure isolation.
-    """
+    """Fixture to clear the LRU cache before each test to ensure isolation."""
     # the following code ensures: clean (before test) -> test -> clean (after test)
     load_config.cache_clear()
     yield
@@ -28,19 +26,15 @@ def reset_lru_cache() -> Generator[None, None, None]:
 
 
 class TestLogger:
+    """Group of tests for the logging utility module."""
+
     def test_load_config_file_not_found(self) -> None:
-        """
-        Check that FileNotFoundError is raised if the path does not exist.
-        """
-        with pytest.raises(
-            FileNotFoundError, match="Logging configuration file not found"
-        ):
+        """Verify that FileNotFoundError is raised if the config path does not exist."""
+        with pytest.raises(FileNotFoundError, match="Logging configuration file not found"):
             load_config(Path("non_existent_path.yaml"))
 
     def test_load_config_invalid_yaml(self, tmp_path: Path) -> None:
-        """
-        Check that ValueError is raised if the YAML is malformed.
-        """
+        """Verify that ValueError is raised if the YAML configuration is malformed."""
         config_file = tmp_path / "bad_config.yaml"
         config_file.write_text("invalid: yaml: : :")
 
@@ -48,21 +42,13 @@ class TestLogger:
             load_config(config_file)
 
     def test_is_logger_name_defined(self, mocker: MockerFixture) -> None:
-        """
-        Verify the detection of loggers in the logging manager's registry.
-        """
-        mocker.patch.dict(
-            "logging.Logger.manager.loggerDict", {"test_logger": mocker.Mock()}
-        )
+        """Check the detection of loggers in the logging manager's registry."""
+        mocker.patch.dict("logging.Logger.manager.loggerDict", {"test_logger": mocker.Mock()})
         assert is_logger_name_defined("test_logger") is True
         assert is_logger_name_defined("unknown_logger") is False
 
-    def test_get_safe_logger_success(
-        self, tmp_path: Path, mocker: MockerFixture
-    ) -> None:
-        """
-        Check that get_safe_logger returns a valid logger when everything is correct.
-        """
+    def test_get_safe_logger_success(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        """Verify that get_safe_logger returns a valid logger when everything is correct."""
         # 1. Create a valid YAML config
         config_file = tmp_path / "valid_config.yaml"
         config_content = {
@@ -84,9 +70,7 @@ class TestLogger:
     def test_get_safe_logger_undefined_in_config(
         self, tmp_path: Path, mocker: MockerFixture
     ) -> None:
-        """
-        Check that ValueError is raised if the logger is not in the YAML.
-        """
+        """Verify that ValueError is raised if the requested logger is missing from YAML."""
         config_file = tmp_path / "valid_config.yaml"
         config_content = {"version": 1, "loggers": {"other": {}}}
         config_file.write_text(yaml.dump(config_content))
@@ -98,9 +82,7 @@ class TestLogger:
             get_safe_logger(config_file, mock_choice)
 
     def test_lru_cache_efficiency(self, tmp_path: Path, mocker: MockerFixture) -> None:
-        """
-        Verify that the file is read only once thanks to the cache.
-        """
+        """Verify that the configuration file is read only once per test."""
         config_file = tmp_path / "cache_test.yaml"
         config_file.write_text(yaml.dump({"version": 1}))
 
@@ -118,9 +100,10 @@ class TestLogger:
     def test_logger_fallback_on_import_error(
         self, mocker: MockerFixture, request: pytest.FixtureRequest
     ) -> None:
-        """
-        Verify that a fallback logger is created if the initial configuration fails.
-        Tests the try/except block at the module's top level.
+        """Verify that a fallback logger is created if the initial configuration fails.
+
+        This test targets the module-level try/except block by forcing a failure of
+        `get_safe_logger` during a module reload.
         """
 
         # 1. Remove the reloaded module from sys.modules
@@ -139,9 +122,7 @@ class TestLogger:
 
         # 3. Mock logging functions within the target module's namespace
         # This ensures we catch calls made during the module reload
-        mock_basic_config = mocker.patch(
-            "de_electricity_meteo.logger.logging.basicConfig"
-        )
+        mock_basic_config = mocker.patch("de_electricity_meteo.logger.logging.basicConfig")
 
         # Prepare a mock for the fallback logger
         mock_fallback_logger = mocker.Mock()

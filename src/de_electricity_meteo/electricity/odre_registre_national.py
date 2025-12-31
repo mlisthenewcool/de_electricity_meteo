@@ -1,11 +1,13 @@
+import asyncio
 from pathlib import Path
 
+import aiohttp
 import polars as pl
 
 from de_electricity_meteo.config.paths import (
     ODRE_REGISTRE_NATIONAL_INSTALLATIONS_BRONZE,
 )
-from de_electricity_meteo.downloader import save_file
+from de_electricity_meteo.downloader import download_to_file
 from de_electricity_meteo.logger import logger
 
 DOWNLOAD_URL = (
@@ -15,14 +17,16 @@ DOWNLOAD_URL = (
 )
 
 
-async def download(url: str, path: Path) -> None:
-    try:
-        await save_file(url=url, path=path)
-    except Exception as e:
-        logger.error(f"Failed to download {DOWNLOAD_URL}. Error: {e}")
+async def download(url: str, dest_path: Path) -> None:  # noqa: D103
+    async with aiohttp.ClientSession() as session:
+        try:
+            total_size = await download_to_file(session=session, url=url, dest_path=dest_path)
+            print(total_size)
+        except Exception as e:
+            logger.error(f"Failed to download {DOWNLOAD_URL}. Error: {e}")
 
 
-async def extract(path: Path) -> pl.LazyFrame:
+async def extract(path: Path) -> pl.LazyFrame:  # noqa: D103
     df = pl.scan_parquet(path)
 
     columns_to_extract = {
@@ -61,25 +65,24 @@ async def extract(path: Path) -> pl.LazyFrame:
     return df
 
 
-async def load() -> None:
+async def load() -> None:  # noqa: D103
     return None
 
 
-async def transform() -> None:
+async def transform() -> None:  # noqa: D103
     return None
 
 
-async def pipeline() -> None:
+async def pipeline() -> None:  # noqa: D103
     await download(
         url=DOWNLOAD_URL,
-        path=ODRE_REGISTRE_NATIONAL_INSTALLATIONS_BRONZE,
+        dest_path=ODRE_REGISTRE_NATIONAL_INSTALLATIONS_BRONZE,
     )
 
-    await extract(path=ODRE_REGISTRE_NATIONAL_INSTALLATIONS_BRONZE)
-    await load()
-    await transform()
+    # await extract(path=ODRE_REGISTRE_NATIONAL_INSTALLATIONS_BRONZE)
+    # await load()
+    # await transform()
 
 
 if __name__ == "__main__":
-    # asyncio.run(pipeline())
-    print(DOWNLOAD_URL)
+    asyncio.run(pipeline())

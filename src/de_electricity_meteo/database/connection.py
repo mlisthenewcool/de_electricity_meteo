@@ -1,8 +1,7 @@
 import psycopg
 
 conn_string = (
-    "dbname=postgres user=my_db_root_username password=my_db_root_password "
-    "host=localhost port=5432"
+    "dbname=postgres user=my_db_root_username password=my_db_root_password host=localhost port=5432"
 )
 
 with psycopg.connect(conn_string) as conn:

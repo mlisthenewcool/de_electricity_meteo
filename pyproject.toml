@@ -26,7 +26,7 @@ dev = [
 
 [tool.ruff]
 #src = ["src", "tests"]
-line-length = 88
+line-length = 100
 include = [
     "src/**/*.py",
     "tests/**/*.py"
@@ -39,9 +39,14 @@ select = [
     "E", "W", # pycodestyle,
     "F", # pyflakes
     "PL", # pylint
+    "D", # pydocstyle
     "NPY", # numpy
 ]
+ignore = ["D100"]
 fixable = ["ALL"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ty.src]
 include = ["src", "tests"]
