@@ -20,8 +20,7 @@ DOWNLOAD_URL = (
 async def download(url: str, dest_path: Path) -> None:  # noqa: D103
     async with aiohttp.ClientSession() as session:
         try:
-            total_size = await download_to_file(session=session, url=url, dest_path=dest_path)
-            print(total_size)
+            await download_to_file(session=session, url=url, dest_path=dest_path)
         except Exception as e:
             logger.error(f"Failed to download {DOWNLOAD_URL}. Error: {e}")
 

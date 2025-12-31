@@ -5,7 +5,9 @@ from typing import Any, Callable, Coroutine, TypeVar
 
 import aiofiles
 import aiohttp
+from tqdm.asyncio import tqdm
 
+from de_electricity_meteo.config.paths import DATA
 from de_electricity_meteo.logger import logger
 
 # Type alias for generic async functions
@@ -119,10 +121,26 @@ async def download_to_file(
         total_bytes = 0
         dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-        async with aiofiles.open(dest_path, mode="wb") as f:
-            async for chunk in response.content.iter_chunked(chunk_size):
-                await f.write(chunk)
-                total_bytes += len(chunk)
+        total_size = int(response.headers.get("content-length", 0))
+
+        progress_bar = tqdm(
+            total=total_size,
+            unit="iB",
+            unit_scale=True,
+            unit_divisor=1024,
+            desc=f"Downloading {dest_path.name}",
+            leave=False,  # La barre disparaît une fois fini pour ne pas polluer le terminal
+        )
+
+        try:
+            async with aiofiles.open(dest_path, mode="wb") as f:
+                async for chunk in response.content.iter_chunked(chunk_size):
+                    await f.write(chunk)
+                    chunk_len = len(chunk)
+                    total_bytes += chunk_len
+                    progress_bar.update(chunk_len)
+        finally:
+            progress_bar.close()
 
         logger.info(
             "Download completed",
@@ -132,3 +150,32 @@ async def download_to_file(
             },
         )
         return total_bytes
+
+
+if __name__ == "__main__":
+
+    async def mock():
+        """Quick function to test speed."""
+        # URL d'un fichier de 100MB pour bien voir la barre de progression
+        file = "1GB.bin"
+        TEST_URL = f"https://ash-speed.hetzner.com/{file}"
+        dest = DATA / file
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                print(f"Démarrage du test vers {dest}...")
+                start_time = asyncio.get_event_loop().time()
+
+                size = await download_to_file(session, TEST_URL, dest)
+
+                end_time = asyncio.get_event_loop().time()
+                duration = end_time - start_time
+                speed_mbps = (size / (1024**2)) / duration
+
+                print("\nTest terminé !")
+                print(f"Vitesse moyenne : {speed_mbps:.2f} MB/s")
+
+            except Exception as e:
+                print(f"Le test a échoué : {e}")
+
+    asyncio.run(mock())

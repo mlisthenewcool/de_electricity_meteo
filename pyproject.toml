@@ -12,6 +12,7 @@ dependencies = [
     "psycopg[binary]>=3.3.2",
     "python-json-logger>=4.0.0",
     "pyyaml>=6.0.3",
+    "tqdm>=4.67.1",
 ]
 
 [dependency-groups]
