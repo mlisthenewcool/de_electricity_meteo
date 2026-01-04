@@ -1,0 +1,24 @@
+# exemple d'un .json généré par le système pour garder une trace
+#{
+#  "ign_iris_countours": {
+#    "version": "2025.01.01",
+#    "last_extraction": "2026-01-04T10:00:00",
+#    "file_path": "data/bronze/iris_2025_01_01.gpkg"
+#  }
+#}
+
+datasets:
+  ign_iris_countours:
+    url: ""
+    target_file: "iris.gpkg"
+    version: "2025.01.01"
+  ign_admin_express:
+    url: ""
+    target_file: ""
+    version: ""
+  odre_installations_production_electrique:
+    url: ""
+    version: ""
+  meteo_france_stations:
+    url: ""
+    version: ""

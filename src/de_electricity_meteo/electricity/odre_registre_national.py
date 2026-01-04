@@ -10,11 +10,7 @@ from de_electricity_meteo.config.paths import (
 from de_electricity_meteo.downloader import download_to_file
 from de_electricity_meteo.logger import logger
 
-DOWNLOAD_URL = (
-    "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/"
-    "registre-national-installation-production-stockage-electricite-agrege/"
-    "exports/parquet?lang=fr&timezone=Europe%2FBerlin"
-)
+DOWNLOAD_URL = "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/registre-national-installation-production-stockage-electricite-agrege/exports/parquet?lang=fr&timezone=Europe%2FBerlin"
 
 
 async def download(url: str, dest_path: Path) -> None:  # noqa: D103
@@ -29,7 +25,7 @@ async def extract(path: Path) -> pl.LazyFrame:  # noqa: D103
     df = pl.scan_parquet(path)
 
     columns_to_extract = {
-        "idpeps": "",
+        "idpeps": "id_peps",
         "nominstallation": "nom_installation",
         "codeeicresourceobject": "",
         # geolocalisation
