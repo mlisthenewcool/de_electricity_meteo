@@ -9,7 +9,28 @@
     * https://github.com/visgl/deck.gl
     * https://github.com/developmentseed/lonboard
 
-## Development
+## Development workflow
+
+* This project uses :
+    * ruff (check & format)
+    * ty (type check)
+    * pre-commit (pre-commit hooks)
+
+Workflow to commit using pre-commit hooks:
+
+```shell
+uv sync --upgrade # --all-groups
+git add .
+uv run pre-commit run
+# now, you should correct errors in the above command
+# ...
+# then execute the following
+git add . && git commit "message"
+
+# if somehow you forgot to run pre-commit before commiting
+# use the following command to avoid polluting the git history 
+git add . && git commit --amend --no-edit
+```
 
 * [enable watch mode on Marimo](https://docs.marimo.io/guides/editor_features/watching/#watching-for-changes-to-your-notebook)
 
