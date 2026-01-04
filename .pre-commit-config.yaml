@@ -25,6 +25,14 @@ repos:
         # preventing pre-commit to check the whole project everytime
         files: ^(src|tests)/
 
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false    # to run every test, even if files aren't modified
+        files: \.(py|yaml|json)$ # run the hook only if any .(py|yaml|json) changed
+        #stages: [ manual, push ] # if tests are taking too much time
+
 
 
 #  - repo: https://github.com/astral-sh/ruff-pre-commit
