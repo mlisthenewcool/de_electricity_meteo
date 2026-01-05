@@ -32,3 +32,5 @@ iris = con.execute(query=query, parameters=[str(contours_iris_path)]).pl()
 print(iris.shape)
 print(iris.columns)
 print(iris.sort(by="code_iris"))
+
+print(iris.filter(pl.col("code_insee") == "01014"))
