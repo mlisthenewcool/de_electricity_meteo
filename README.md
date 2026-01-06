@@ -79,7 +79,8 @@ git add . && git commit --amend --no-edit
         * certaines données ne sont pas remontées immédiatement (vérifier, mais environ 1h).
 
 * Météo
-    * todo
+    * https://www.data.gouv.fr/datasets/informations-sur-les-stations-metadonnees
+        * liste des stations avec historique complet
 
 * Geo
     * CONTOURS...IRIS (chosen, best if possible)
@@ -91,6 +92,10 @@ git add . && git commit --amend --no-edit
         * [documentation](https://geoservices.ign.fr/documentation/donnees/vecteur/adminexpress)
     * might be util ?
         * https://github.com/InseeFrLab/pynsee
+
+# AI
+
+* code review: https://www.coderabbit.ai/
 
 ### Todo
 

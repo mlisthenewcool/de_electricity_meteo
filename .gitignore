@@ -9,6 +9,9 @@ data/**
 
 .idea/
 
+.claude/
+CLAUDE.md
+
 # --------------------------------------------------------------
 # https://github.com/github/gitignore/blob/main/Python.gitignore
 # copy content from this file under (last copied 2025_12_22)
