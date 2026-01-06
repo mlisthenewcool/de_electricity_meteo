@@ -16,9 +16,11 @@ def _():
 
 @app.cell
 def _(DATA_BRONZE, pl):
-    station_ids = ["01089001"]  # "01014002"
+    station_ids = ["01071001"]  # "01089001", "01014002"
 
-    paths = {id: DATA_BRONZE / f"meteo_france_climatologie_station_{id}.csv" for id in station_ids}
+    paths = {
+        id: DATA_BRONZE / f"/meteo_france_climatologie/_station_{id}_*.csv" for id in station_ids
+    }
 
     dfs = {
         id: pl.read_csv(

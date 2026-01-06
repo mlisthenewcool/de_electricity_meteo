@@ -13,11 +13,12 @@
 # bcp de fichiers (par département + par décennie)
 
 
-# --- climatologiques (historique)
+# --- climatologiques (données qualifiées, mais aussi temps réel ?)
 # → https://www.data.gouv.fr/datasets/donnees-climatologiques-de-base-horaires
 # → https://meteo.data.gouv.fr/datasets/6569b4473bedf2e7abad3b72
 # données qualifiées, archivées, des stations historisées, encore actives ou non
 # https://confluence-meteofrance.atlassian.net/wiki/spaces/OpenDataMeteoFrance/pages/854261785/API+Donn+es+Climatologiques
+# documentation des champs : https://www.data.gouv.fr/datasets/donnees-climatologiques-de-base-horaires?resource_id=48b7e4aa-3ca1-4a63-9ab1-a723357336ff
 # granularité d'accès = 1 station
 # maximum 1 an de données à la fois
 import asyncio

@@ -1,3 +1,14 @@
+"""Logging configuration and utilities.
+
+This module provides a centralized logging setup using YAML configuration.
+It supports JSON-formatted structured logging for better log aggregation.
+
+Usage:
+    from de_electricity_meteo.logger import logger
+
+    logger.info("Message", extra={"key": "value"})
+"""
+
 import logging
 import logging.config
 from functools import lru_cache
