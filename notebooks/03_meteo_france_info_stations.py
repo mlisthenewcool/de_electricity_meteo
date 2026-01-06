@@ -9,9 +9,9 @@ def _():
     import marimo as mo
     import polars as pl
 
-    from de_electricity_meteo.config.paths import METEO_FRANCE_INFO_STATIONS_BRONZE
+    from de_electricity_meteo.config.paths import METEO_FRANCE_INFO_STATIONS_BRONZE, DATA_BRONZE
 
-    return METEO_FRANCE_INFO_STATIONS_BRONZE, pl
+    return DATA_BRONZE, METEO_FRANCE_INFO_STATIONS_BRONZE, pl
 
 
 @app.cell
@@ -833,11 +833,107 @@ def _(____df, pl):
 
 
 @app.cell
-def _(____df):
-    ____df.null_count()
+def _(____df, pl):
+    # next steps
 
-    # next steps :
-    # voir si
+    # reorder and rename columns
+    column_mapping = {
+        "id": "id",  # vérifier si les 5 premiers caractères sont bien identiques au code INSEE (grâce au nom par ex ?)
+        "nom": "nom",  # à mettre en relation avec le référentiel INSEE ?
+        "lieuDit": "lieu_dit",  # est-ce important ?
+        "bassin": "bassin",  # qu'est-ce que c'est ?
+        "dateDebut": "date_debut",
+        "dateFin": "date_fin",
+        "positions": "positions",  # todo:
+        "typesPoste": "types_poste",  # todo: applatir sur le dernier actif
+        "n_postes_actifs": "n_postes",  # todo: à retirer
+        "type_poste_actif": "type_poste_actif",  # todo: ?
+        "producteurs": "producteurs",  # todo: applatir sur le dernier actif
+        "parametres": "parametres",  # todo: à retirer
+        "parametres_actifs": "parametres_actifs",  # todo: à retirer
+        "parametres_actifs_pertinents": "parametres_actifs_pertinents",  # todo: à conserver, bien vérifier
+    }
+
+    # On sélectionne en appliquant le mapping dynamiquement
+    _____df = ____df.select([pl.col(old).alias(new) for old, new in column_mapping.items()])
+    return (_____df,)
+
+
+@app.cell
+def _(_____df, ____df):
+    print(len(____df.columns), ____df.columns)
+    print(len(_____df.columns), _____df.columns)
+    return
+
+
+@app.cell
+def _(_____df):
+    _____df
+    return
+
+
+@app.cell
+def _(DATA_BRONZE, pl):
+    # https://public-api.meteofrance.fr/public/DPPaquetObs/v1/liste-stations
+    liste_stations_path = DATA_BRONZE / "liste-stations-obs-metropole-om.csv"
+    df_from_api = pl.read_csv(
+        liste_stations_path,
+        separator=";",
+        has_header=True,
+        schema_overrides={"Id_station": pl.String},
+    )
+
+    print(df_from_api.columns)
+    print(df_from_api.shape)
+    return (df_from_api,)
+
+
+@app.cell
+def _(_____df, pl):
+    _____df_seulement_type_0_a_2 = _____df.filter(
+        pl.col("type_poste_actif")
+        .list.eval(pl.element().struct.field("type").is_in([0, 1, 2]))
+        .list.sum()
+        > 0
+    )
+    return (_____df_seulement_type_0_a_2,)
+
+
+@app.cell
+def _(_____df_seulement_type_0_a_2, df_from_api):
+    # vérifications avec l'api
+    stations_pas_dans_le_referentiel = df_from_api.join(
+        _____df_seulement_type_0_a_2, left_on="Id_station", right_on="id", how="anti"
+    )
+
+    print("stations_pas_dans_le_referentiel:", stations_pas_dans_le_referentiel.shape)
+    stations_pas_dans_le_referentiel
+    return
+
+
+@app.cell
+def _(_____df_seulement_type_0_a_2, df_from_api):
+    stations_pas_dans_api = _____df_seulement_type_0_a_2.join(
+        df_from_api, left_on="id", right_on="Id_station", how="anti"
+    )
+
+    print("stations_pas_dans_api:", stations_pas_dans_api.shape)
+    stations_pas_dans_api
+    return
+
+
+@app.cell
+def _(df, pl):
+    df.filter(pl.col("id") == "01384003")
+    return
+
+
+@app.cell
+def _(_____df, pl):
+    _____df_seulement_type_0 = _____df.filter(
+        pl.col("type_poste_actif").list.eval(pl.element().struct.field("type") == 0).list.sum() > 0
+    )
+    _____df_seulement_type_0
     return
 
 

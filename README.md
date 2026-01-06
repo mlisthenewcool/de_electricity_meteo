@@ -76,9 +76,12 @@ git add . && git commit --amend --no-edit
         * todo documentation
     * https://odre.opendatasoft.com/explore/dataset/eco2mix-regional-tr
         * todo documentation
-        * certaines données ne sont pas remontées immédiatement (vérifier, mais environ 1h)
+        * certaines données ne sont pas remontées immédiatement (vérifier, mais environ 1h).
 
-* geo
+* Météo
+    * todo
+
+* Geo
     * CONTOURS...IRIS (chosen, best if possible)
         * [source](https://geoservices.ign.fr/contoursiris)
         * [documentation](https://geoservices.ign.fr/documentation/donnees/vecteur/contoursiris)
