@@ -9,6 +9,3 @@ ODRE_REGISTRE_NATIONAL_INSTALLATIONS_BRONZE = (
     DATA_BRONZE / "odre_registre_national_installations.parquet"
 )
 METEO_FRANCE_INFO_STATIONS_BRONZE = DATA_BRONZE / "meteo_france_info_stations.json"
-
-CONFIG = ROOT_DIR / Path("src/de_electricity_meteo/config")
-LOGGER_CONFIG = CONFIG / "logger.yaml"

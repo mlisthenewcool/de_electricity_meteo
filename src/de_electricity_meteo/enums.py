@@ -7,16 +7,18 @@ configuration values, avoiding magic strings.
 from enum import StrEnum
 
 
-class LoggerChoice(StrEnum):
-    """Available logger configurations defined in config/logger.yaml.
+class ExistingFileAction(StrEnum):
+    """Action to take when a destination file already exists.
 
-    Each value corresponds to a logger name in the YAML configuration file.
-    Use these values with get_safe_logger() to retrieve a configured logger.
+    Used by download and extraction functions to control how existing files
+    are handled.
 
     Attributes:
-        CONSOLE: JSON-formatted logger that outputs to stdout.
-        FILE: JSON-formatted logger that outputs to a rotating file (if configured).
+        OVERWRITE: Replace the existing file with the new one.
+        SKIP: Keep the existing file and skip the operation.
+        ERROR: Raise a FileExistsError exception.
     """
 
-    CONSOLE = "jsonConsoleLogger"
-    FILE = "jsonFileLogger"
+    OVERWRITE = "overwrite"
+    SKIP = "skip"
+    ERROR = "error"

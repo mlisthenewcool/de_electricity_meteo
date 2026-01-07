@@ -19,6 +19,7 @@ from de_electricity_meteo.downloader import (
     stream_retry,
     validate_sqlite_header,
 )
+from de_electricity_meteo.enums import ExistingFileAction
 from de_electricity_meteo.exceptions import (
     ArchiveNotFoundError,
     FileIntegrityError,
@@ -221,8 +222,8 @@ class TestExtract7zSync:
         assert exc_info.value.target_filename == "missing.gpkg"
         assert exc_info.value.archive_path == archive
 
-    def test_skip_when_exists_and_no_overwrite(self, tmp_path: Path, mocker: MockerFixture) -> None:
-        """Extraction is skipped when file exists and overwrite=False."""
+    def test_skip_when_exists_and_skip_action(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        """Extraction is skipped when file exists and if_exists=SKIP."""
         archive = tmp_path / "archive.7z"
         archive.touch()
         dest = tmp_path / "output.gpkg"
@@ -231,9 +232,19 @@ class TestExtract7zSync:
         # py7zr should never be called
         mock_sevenzipfile = mocker.patch("de_electricity_meteo.downloader.py7zr.SevenZipFile")
 
-        extract_7z_sync(archive, "file.gpkg", dest, overwrite=False)
+        extract_7z_sync(archive, "file.gpkg", dest, if_exists=ExistingFileAction.SKIP)
 
         mock_sevenzipfile.assert_not_called()
+
+    def test_error_when_exists_and_error_action(self, tmp_path: Path) -> None:
+        """FileExistsError is raised when file exists and if_exists=ERROR."""
+        archive = tmp_path / "archive.7z"
+        archive.touch()
+        dest = tmp_path / "output.gpkg"
+        dest.touch()  # File already exists
+
+        with pytest.raises(FileExistsError, match="already exists"):
+            extract_7z_sync(archive, "file.gpkg", dest, if_exists=ExistingFileAction.ERROR)
 
     def test_successful_extraction(self, tmp_path: Path, mocker: MockerFixture) -> None:
         """Successful extraction of a file from archive."""
@@ -330,9 +341,17 @@ class TestExtract7zAsync:
             return_value=None,
         )
 
-        await extract_7z_async(archive, "iris.gpkg", dest, overwrite=True, validate_sqlite=False)
+        await extract_7z_async(
+            archive,
+            "iris.gpkg",
+            dest,
+            if_exists=ExistingFileAction.OVERWRITE,
+            validate_sqlite=False,
+        )
 
-        mock_sync.assert_called_once_with(archive, "iris.gpkg", dest, True, False)
+        mock_sync.assert_called_once_with(
+            archive, "iris.gpkg", dest, ExistingFileAction.OVERWRITE, False
+        )
 
     @pytest.mark.asyncio
     async def test_propagates_exceptions(self, tmp_path: Path) -> None:
@@ -373,7 +392,7 @@ class TestDownloadToFile:
         # Disable tqdm for cleaner test output
         mocker.patch("de_electricity_meteo.downloader.tqdm", return_value=MagicMock())
 
-        result = await download_to_file(mock_session, "http://example.com/file", dest)
+        result = await download_to_file(mock_session, "https://example.com/file", dest)
 
         assert result == len(content)
         assert dest.exists()
@@ -401,7 +420,7 @@ class TestDownloadToFile:
 
         mocker.patch("de_electricity_meteo.downloader.tqdm", return_value=MagicMock())
 
-        await download_to_file(mock_session, "http://example.com/file", dest)
+        await download_to_file(mock_session, "https://example.com/file", dest)
 
         assert dest.parent.exists()
         assert dest.exists()
@@ -422,8 +441,37 @@ class TestDownloadToFile:
             )
 
         with pytest.raises(RetryExhaustedError) as exc_info:
-            await mock_download(None, "http://example.com/missing", dest)
+            await mock_download(None, "https://example.com/missing", dest)
 
         assert exc_info.value.attempts == 1
-        assert "http://example.com/missing" in exc_info.value.url
+        assert "https://example.com/missing" in exc_info.value.url
         assert isinstance(exc_info.value.last_error, aiohttp.ClientResponseError)
+
+    @pytest.mark.asyncio
+    async def test_skip_when_file_exists(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        """Download is skipped when file exists and if_exists=SKIP."""
+        dest = tmp_path / "existing.bin"
+        dest.write_bytes(b"existing content")
+
+        mock_session = MagicMock()
+
+        result = await download_to_file(
+            mock_session, "https://example.com/file", dest, if_exists=ExistingFileAction.SKIP
+        )
+
+        assert result == 0
+        assert dest.read_bytes() == b"existing content"
+        mock_session.get.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_error_when_file_exists(self, tmp_path: Path) -> None:
+        """FileExistsError is raised when file exists and if_exists=ERROR."""
+        dest = tmp_path / "existing.bin"
+        dest.touch()
+
+        mock_session = MagicMock()
+
+        with pytest.raises(FileExistsError, match="already exists"):
+            await download_to_file(
+                mock_session, "https://example.com/file", dest, if_exists=ExistingFileAction.ERROR
+            )

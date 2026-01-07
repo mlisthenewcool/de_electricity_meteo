@@ -27,6 +27,7 @@ from de_electricity_meteo.config.settings import (
     RETRY_INITIAL_DELAY,
     RETRY_MAX_ATTEMPTS,
 )
+from de_electricity_meteo.enums import ExistingFileAction
 from de_electricity_meteo.exceptions import (
     ArchiveNotFoundError,
     FileIntegrityError,
@@ -87,17 +88,17 @@ def stream_retry(
                     attempt += 1
                     if attempt > max_retries:
                         logger.error(
-                            "All retry attempts exhausted",
+                            "Download failed after all retries",
                             extra={"url": url, "attempts": attempt, "error": str(e)},
                         )
                         break
 
                     logger.warning(
-                        "Retry attempt",
+                        "Retrying after error",
                         extra={
                             "attempt": attempt,
-                            "max_retries": max_retries,
-                            "delay_seconds": current_delay,
+                            "max_attempts": max_retries + 1,
+                            "delay_sec": round(current_delay, 1),
                             "error": str(e),
                         },
                     )
@@ -106,6 +107,7 @@ def stream_retry(
 
             if last_exception:
                 raise RetryExhaustedError(url=str(url), attempts=attempt, last_error=last_exception)
+
             raise RetryExhaustedError(
                 url=str(url), attempts=attempt, last_error=RuntimeError("Unknown failure")
             )
@@ -121,6 +123,7 @@ async def download_to_file(
     url: str,
     dest_path: Path,
     chunk_size: int = DOWNLOAD_CHUNK_SIZE,
+    if_exists: ExistingFileAction = ExistingFileAction.SKIP,
 ) -> int:
     """Downloads a stream from a URL and saves it to disk using async buffers.
 
@@ -134,17 +137,37 @@ async def download_to_file(
         dest_path: The local filesystem path where the file will be stored.
         chunk_size: The size of each data chunk to read from the network and
             write to disk, in bytes. Defaults to DOWNLOAD_CHUNK_SIZE.
+        if_exists: Action when dest_path already exists. Defaults to OVERWRITE.
 
     Returns:
-        The total number of bytes successfully written to the file.
+        The total number of bytes successfully written to the file, or 0 if skipped.
 
     Raises:
+        FileExistsError: If if_exists is ERROR and the file already exists.
         RetryExhaustedError: If all retry attempts fail due to network errors.
         aiohttp.ClientResponseError: If the server returns an error status
             code (4xx or 5xx).
         OSError: If a filesystem error occurs while creating directories
             or writing the file.
     """
+    if dest_path.exists():
+        match if_exists:
+            case ExistingFileAction.SKIP:
+                logger.debug(
+                    "Skipping download: file exists",
+                    extra={"path": str(dest_path)},
+                )
+                return 0
+            case ExistingFileAction.ERROR:
+                raise FileExistsError(f"File already exists: {dest_path}")
+            case ExistingFileAction.OVERWRITE:
+                logger.debug(
+                    "Overwriting existing file",
+                    extra={"path": str(dest_path)},
+                )
+
+    logger.info("Starting download", extra={"url": url, "dest": dest_path.name})
+
     timeout = aiohttp.ClientTimeout(
         total=DOWNLOAD_TIMEOUT_TOTAL,
         connect=DOWNLOAD_TIMEOUT_CONNECT,
@@ -165,7 +188,7 @@ async def download_to_file(
             unit_scale=True,
             unit_divisor=1024,
             desc=f"Downloading {dest_path.name}",
-            leave=False,  # La barre disparaît une fois fini pour ne pas polluer le terminal
+            leave=False,  # the bar disappears once finished
         )
 
         try:
@@ -180,10 +203,7 @@ async def download_to_file(
 
         logger.info(
             "Download completed",
-            extra={
-                "path": str(dest_path),
-                "size_mb": round(total_bytes / (1024**2), 2),
-            },
+            extra={"path": dest_path.name, "size_mb": round(total_bytes / (1024**2), 2)},
         )
         return total_bytes
 
@@ -220,7 +240,7 @@ def extract_7z_sync(
     archive_path: Path,
     target_filename: str,
     dest_path: Path,
-    overwrite: bool = True,
+    if_exists: ExistingFileAction = ExistingFileAction.SKIP,
     validate_sqlite: bool = True,
 ) -> None:
     """Extracts a specific file from a 7z archive atomically.
@@ -230,15 +250,16 @@ def extract_7z_sync(
 
     Args:
         archive_path: Path to the source .7z archive.
-        target_filename: Name or suffix of the file to extract (e.g., 'iris.gpkg').
+        target_filename: Name or suffix of the file to extract.
         dest_path: Final destination path for the extracted file.
-        overwrite: If True, replaces existing file at dest_path. Defaults to True.
+        if_exists: Action when dest_path already exists. Defaults to OVERWRITE.
         validate_sqlite: If True, validates the extracted file has a valid
             SQLite/GeoPackage header. Defaults to True.
 
     Raises:
         ArchiveNotFoundError: If the archive_path does not exist.
         FileNotFoundInArchiveError: If target_filename is not found in the archive.
+        FileExistsError: If if_exists is ERROR and the file already exists.
         FileIntegrityError: If validation is enabled and the file is invalid.
         py7zr.exceptions.ArchiveError: If the archive is corrupted or invalid.
         OSError: If a filesystem error occurs during extraction or file moving.
@@ -247,16 +268,25 @@ def extract_7z_sync(
         raise ArchiveNotFoundError(archive_path)
 
     if dest_path.exists():
-        if not overwrite:
-            logger.debug(
-                "File already exists, skipping",
-                extra={"file": dest_path.name, "overwrite": overwrite},
-            )
-            return
-        logger.debug(
-            "File already exists, will overwrite",
-            extra={"file": dest_path.name, "overwrite": overwrite},
-        )
+        match if_exists:
+            case ExistingFileAction.SKIP:
+                logger.debug(
+                    "Skipping extraction: file exists",
+                    extra={"path": str(dest_path)},
+                )
+                return
+            case ExistingFileAction.ERROR:
+                raise FileExistsError(f"File already exists: {dest_path}")
+            case ExistingFileAction.OVERWRITE:
+                logger.debug(
+                    "Overwriting existing file",
+                    extra={"path": str(dest_path)},
+                )
+
+    logger.info(
+        "Starting extraction",
+        extra={"archive": archive_path.name, "target": target_filename},
+    )
 
     with tempfile.TemporaryDirectory(prefix="tmp_dir_7z_extract") as tmp_dir:
         tmp_dir_path = Path(tmp_dir)
@@ -272,8 +302,8 @@ def extract_7z_sync(
                 raise FileNotFoundInArchiveError(target_filename, archive_path)
 
             logger.debug(
-                "Extracting file from archive",
-                extra={"target": target_internal_path, "archive": archive_path.name},
+                "Found target in archive",
+                extra={"internal_path": target_internal_path},
             )
             archive.extract(path=tmp_dir_path, targets=[target_internal_path])
             extracted_file = tmp_dir_path / target_internal_path
@@ -293,8 +323,8 @@ def extract_7z_sync(
 
             size_mb = round(dest_path.stat().st_size / 1024**2, 2)
             logger.info(
-                "File successfully extracted",
-                extra={"dest": str(dest_path), "size_mb": size_mb},
+                "Extraction completed",
+                extra={"path": dest_path.name, "size_mb": size_mb},
             )
 
 
@@ -302,7 +332,7 @@ async def extract_7z_async(
     archive_path: Path,
     target_filename: str,
     dest_path: Path,
-    overwrite: bool = True,
+    if_exists: ExistingFileAction = ExistingFileAction.SKIP,
     validate_sqlite: bool = True,
 ) -> None:
     """Wraps the 7z extraction in an executor to avoid blocking the event loop.
@@ -312,15 +342,16 @@ async def extract_7z_async(
 
     Args:
         archive_path: Path to the source .7z archive.
-        target_filename: Exact name or suffix of the file to extract (e.g., 'iris.gpkg').
+        target_filename: Exact name or suffix of the file to extract.
         dest_path: Final destination path for the extracted file.
-        overwrite: If True, replaces existing file at dest_path. Defaults to True.
+        if_exists: Action when dest_path already exists. Defaults to OVERWRITE.
         validate_sqlite: If True, validates the extracted file has a valid
             SQLite/GeoPackage header. Defaults to True.
 
     Raises:
         ArchiveNotFoundError: If the archive_path does not exist.
         FileNotFoundInArchiveError: If target_filename is not found in the archive.
+        FileExistsError: If if_exists is ERROR and the file already exists.
         FileIntegrityError: If validation is enabled and the file is invalid.
     """
     loop = asyncio.get_running_loop()
@@ -334,7 +365,7 @@ async def extract_7z_async(
             archive_path,
             target_filename,
             dest_path,
-            overwrite,
+            if_exists,
             validate_sqlite,
         )
 
@@ -342,7 +373,7 @@ async def extract_7z_async(
 if __name__ == "__main__":
     # Manual test functions for development - use pytest for actual testing
 
-    async def download_contours_iris() -> None:
+    async def download_contours_iris(if_exists: ExistingFileAction) -> None:
         """Download and extract CONTOURS-IRIS GeoPackage from IGN."""
         url = (
             "https://data.geopf.fr/telechargement/download/CONTOURS-IRIS/"
@@ -354,7 +385,7 @@ if __name__ == "__main__":
 
         async with aiohttp.ClientSession() as session:
             try:
-                await download_to_file(session, url, archive_path)
+                await download_to_file(session, url, archive_path, if_exists=if_exists)
             except RetryExhaustedError as e:
                 logger.error("Download failed", extra={"error": str(e)})
                 return
@@ -364,12 +395,12 @@ if __name__ == "__main__":
                 archive_path=archive_path,
                 target_filename="iris.gpkg",
                 dest_path=dest_path,
-                overwrite=True,
+                if_exists=if_exists,
             )
         except (ArchiveNotFoundError, FileNotFoundInArchiveError, FileIntegrityError) as e:
             logger.error("Extraction failed", extra={"error": str(e)})
 
-    async def download_admin_express_cog() -> None:
+    async def download_admin_express_cog(if_exists: ExistingFileAction) -> None:
         """Download and extract ADMIN-EXPRESS-COG GeoPackage from IGN."""
         url = (
             "https://data.geopf.fr/telechargement/download/ADMIN-EXPRESS-COG/"
@@ -382,7 +413,7 @@ if __name__ == "__main__":
 
         async with aiohttp.ClientSession() as session:
             try:
-                await download_to_file(session, url, archive_path)
+                await download_to_file(session, url, archive_path, if_exists=if_exists)
             except RetryExhaustedError as e:
                 logger.error("Download failed", extra={"error": str(e)})
                 return
@@ -392,10 +423,11 @@ if __name__ == "__main__":
                 archive_path=archive_path,
                 target_filename=target_filename,
                 dest_path=dest_path,
-                overwrite=True,
+                if_exists=if_exists,
             )
         except (ArchiveNotFoundError, FileNotFoundInArchiveError, FileIntegrityError) as e:
             logger.error("Extraction failed", extra={"error": str(e)})
 
     # Run the desired download function
-    asyncio.run(download_contours_iris())
+    asyncio.run(download_contours_iris(ExistingFileAction.SKIP))
+    asyncio.run(download_admin_express_cog(ExistingFileAction.SKIP))

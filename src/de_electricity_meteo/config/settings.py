@@ -1,16 +1,15 @@
 """Application settings and constants.
 
 This module centralizes all configurable parameters for the application,
-including logging, download, and retry settings.
+including logging, download and retry settings.
 """
-
-from de_electricity_meteo.enums import LoggerChoice
 
 # =============================================================================
 # Logging Settings
 # =============================================================================
 
-LOGGER_NAME = LoggerChoice.CONSOLE
+# Minimum log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL: str = "DEBUG"
 
 # =============================================================================
 # Download Settings

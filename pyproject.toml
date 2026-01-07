@@ -8,6 +8,7 @@ dependencies = [
     "aiofiles>=25.1.0",
     "aiohttp>=3.13.3",
     "duckdb>=1.4.3",
+    "loguru>=0.7.3",
     "marimo[recommended]>=0.18.4",
     "polars>=1.36.1",
     "psycopg[binary]>=3.3.2",
