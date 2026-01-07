@@ -15,6 +15,7 @@ Usage:
         logger.exception("Operation failed", extra={"context": "data_pipeline"})
 """
 
+import re
 import sys
 from typing import Any
 
@@ -37,6 +38,7 @@ class LoguruAdapter:
     _MAGENTA = "\x1b[35m"
     _WHITE = "\x1b[37m"
     _RESET = "\x1b[0m"
+    _ANSI_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 
     _FORMAT = (
         "<green>{time:HH:mm:ss}</green> | "
@@ -66,24 +68,52 @@ class LoguruAdapter:
         self._logger = patched
 
     @staticmethod
+    def _strip_ansi(text: str) -> str:
+        """Strip ANSI escape sequences from text to prevent injection.
+
+        Args:
+            text: Input string that may contain ANSI escape codes.
+
+        Returns:
+            String with all ANSI escape sequences removed.
+        """
+        return LoguruAdapter._ANSI_PATTERN.sub("", text)
+
+    @staticmethod
     def _format_extra(record: dict[str, Any]) -> None:
         """Patch function to format extra fields for colored display.
 
         Transforms the extra dict into a formatted string with ANSI colors
-        that will be appended to each log line.
+        that will be appended to each log line. User-provided values are
+        sanitized to prevent ANSI escape sequence injection.
 
         Args:
             record: Loguru record dict containing the 'extra' field.
         """
         extra = record["extra"]
-        if extra:
-            formatted = " | ".join(
-                f"{LoguruAdapter._MAGENTA}{k}={LoguruAdapter._WHITE}{v}{LoguruAdapter._RESET}"
-                for k, v in extra.items()
-            )
-            record["extra_str"] = f" | {formatted}"
-        else:
+        if not extra:
             record["extra_str"] = ""
+            return
+
+        parts: list[str] = []
+
+        for k, v in extra.items():
+            try:
+                v_safe = LoguruAdapter._strip_ansi(str(v))
+            except ValueError:
+                v_safe = "<REPR_ERROR>"
+
+            try:
+                k_safe = LoguruAdapter._strip_ansi(str(k))
+            except ValueError:
+                k_safe = "<REPR_ERROR>"
+
+            parts.append(
+                f"{LoguruAdapter._MAGENTA}{k_safe}{LoguruAdapter._RESET}"
+                f"={LoguruAdapter._WHITE}{v_safe}{LoguruAdapter._RESET}"
+            )
+
+        record["extra_str"] = " | " + " | ".join(parts)
 
     def _log(self, level: str, message: str, **kwargs: Any) -> None:
         """Internal logging method that handles extra={} conversion.
@@ -125,7 +155,12 @@ class LoguruAdapter:
 
         Should be called from within an exception handler.
         """
-        kwargs["exc_info"] = True
+        if sys.exc_info()[0] is None:
+            kwargs["exc_info"] = False
+            kwargs["extra"] = {"note": "logger.exception() called without active exception"}
+        else:
+            kwargs["exc_info"] = True
+
         self._log("error", message, **kwargs)
 
 
@@ -133,16 +168,24 @@ logger = LoguruAdapter()
 
 
 if __name__ == "__main__":
+    # Visual demo of logger output - run with: python -m de_electricity_meteo.core.logger
     extras = {"status": "working", "user_id": 42}
-    logger.debug("Testing DEBUG level...", extra=extras)
-    logger.info("Testing INFO level...", extra=extras)
-    logger.warning("Testing WARNING level...", extra=extras)
-    logger.error("Testing ERROR level...", extra=extras)
-    logger.critical("Testing CRITICAL level...", extra=extras)
+
+    logger.debug("Debug level message", extra=extras)
+    logger.info("Info level message", extra=extras)
+    logger.warning("Warning level message", extra=extras)
+    logger.error("Error level message", extra=extras)
+    logger.critical("Critical level message", extra=extras)
 
     logger.info("Message without extras")
 
+    logger.info("msg", extra={"message": "<red>should not be interpreted</red>"})
+    logger.info("msg", extra={"\x1b[31mkey": "should not be interpreted"})
+    logger.info("msg", extra={"should not be interpreted": "\x1b[31mkey"})
+
+    logger.exception("Raised without active exception")
+
     try:
         result = 1 / 0
-    except Exception:
-        logger.exception("Testing exception traceback", extra={"context": "division"})
+    except ZeroDivisionError:
+        logger.exception("Exception with traceback", extra={"context": "division"})

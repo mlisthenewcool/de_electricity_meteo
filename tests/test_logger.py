@@ -1,136 +1,127 @@
 """Tests for the Loguru-based logger module."""
 
-import io
-import sys
-
 import pytest
 
-from de_electricity_meteo.core.logger import LoguruAdapter
+from de_electricity_meteo.core.logger import LoguruAdapter, logger
 
 
 class TestLoguruAdapter:
-    """Tests for the LoguruAdapter class."""
+    """Tests for LoguruAdapter initialization and log methods."""
 
-    @pytest.fixture
-    def capture_stderr(self) -> io.StringIO:
-        """Fixture to capture stderr output."""
-        return io.StringIO()
+    def test_initialization_default_and_custom_level(self) -> None:
+        """LoguruAdapter initializes with default and custom levels."""
+        assert LoguruAdapter()._logger is not None
+        assert LoguruAdapter(level="WARNING")._logger is not None
 
-    @pytest.fixture
-    def adapter(self, capture_stderr: io.StringIO) -> LoguruAdapter:
-        """Create an adapter that writes to captured stderr."""
-        # Redirect stderr temporarily
-        original_stderr = sys.stderr
-        sys.stderr = capture_stderr
+    def test_invalid_level_raises(self) -> None:
+        """Invalid log level raises ValueError."""
+        with pytest.raises(ValueError, match="(?i)level"):
+            LoguruAdapter(level="INVALID")
 
+    @pytest.mark.parametrize("method", ["debug", "info", "warning", "error", "critical"])
+    def test_log_methods(self, method: str) -> None:
+        """All log methods work with and without extra."""
+        adapter = LoguruAdapter()
+        log_fn = getattr(adapter, method)
+        log_fn("message")
+        log_fn("message", extra={"key": "value"})
+
+    def test_exception_with_active_exception(self, capsys: pytest.CaptureFixture) -> None:
+        """exception() logs traceback when called in handler."""
         adapter = LoguruAdapter(level="DEBUG")
-
-        # Restore stderr for other operations
-        sys.stderr = original_stderr
-        return adapter
-
-    def test_adapter_initialization(self) -> None:
-        """LoguruAdapter initializes without errors."""
-        adapter = LoguruAdapter()
-        assert adapter._logger is not None
-
-    def test_adapter_custom_level(self) -> None:
-        """LoguruAdapter accepts custom log level."""
-        adapter = LoguruAdapter(level="WARNING")
-        assert adapter._logger is not None
-
-    def test_log_methods_exist(self) -> None:
-        """All standard log methods are available."""
-        adapter = LoguruAdapter()
-
-        assert hasattr(adapter, "debug")
-        assert hasattr(adapter, "info")
-        assert hasattr(adapter, "warning")
-        assert hasattr(adapter, "error")
-        assert hasattr(adapter, "critical")
-        assert hasattr(adapter, "exception")
-
-    def test_log_methods_callable_without_extra(self) -> None:
-        """Log methods work without extra parameter."""
-        adapter = LoguruAdapter()
-
-        # Should not raise
-        adapter.debug("Debug message")
-        adapter.info("Info message")
-        adapter.warning("Warning message")
-        adapter.error("Error message")
-        adapter.critical("Critical message")
-
-    def test_log_methods_callable_with_extra(self) -> None:
-        """Log methods work with extra parameter."""
-        adapter = LoguruAdapter()
-        extras = {"key": "value", "count": 42}
-
-        # Should not raise
-        adapter.debug("Debug message", extra=extras)
-        adapter.info("Info message", extra=extras)
-        adapter.warning("Warning message", extra=extras)
-        adapter.error("Error message", extra=extras)
-        adapter.critical("Critical message", extra=extras)
-
-    def test_exception_method_in_handler(self) -> None:
-        """Exception method logs traceback when called in exception handler."""
-        adapter = LoguruAdapter()
-
         try:
-            raise ValueError("Test error")
+            raise ValueError("test error")
         except ValueError:
-            # Should not raise
-            adapter.exception("Caught an error", extra={"context": "test"})
+            adapter.exception("caught", extra={"ctx": "test"})
+        assert "ValueError" in capsys.readouterr().err
 
-    def test_format_extra_with_values(self) -> None:
-        """_format_extra correctly formats extra fields."""
-        adapter = LoguruAdapter()
-        record: dict = {"extra": {"status": "ok", "count": 5}}
+    def test_exception_without_active_exception(self, capsys: pytest.CaptureFixture) -> None:
+        """exception() adds note when called outside handler."""
+        LoguruAdapter(level="DEBUG").exception("no exception")
+        output = capsys.readouterr().err
+        assert "no exception" in output
+        assert "logger.exception() called without active exception" in output
 
-        adapter._format_extra(record)
 
-        assert "extra_str" in record
-        assert "status" in record["extra_str"]
-        assert "ok" in record["extra_str"]
-        assert "count" in record["extra_str"]
-        assert "5" in record["extra_str"]
+class TestFormatExtra:
+    """Tests for _format_extra static method."""
 
-    def test_format_extra_empty(self) -> None:
-        """_format_extra returns empty string when no extras."""
-        adapter = LoguruAdapter()
+    def test_empty_extra(self) -> None:
+        """Empty extra produces empty string."""
         record: dict = {"extra": {}}
-
-        adapter._format_extra(record)
-
+        LoguruAdapter._format_extra(record)
         assert record["extra_str"] == ""
 
-    def test_format_extra_contains_ansi_colors(self) -> None:
-        """_format_extra includes ANSI color codes."""
-        adapter = LoguruAdapter()
-        record: dict = {"extra": {"key": "value"}}
+    def test_formats_key_value_with_ansi(self) -> None:
+        """Extra fields are formatted with ANSI colors."""
+        record: dict = {"extra": {"status": "ok", "count": 5}}
+        LoguruAdapter._format_extra(record)
+        assert all(s in record["extra_str"] for s in ["status", "ok", "count", "5", "\x1b["])
 
-        adapter._format_extra(record)
+    def test_strips_ansi_from_user_input(self) -> None:
+        """ANSI codes in keys and values are stripped."""
+        record: dict = {"extra": {"\x1b[31mkey\x1b[0m": "\x1b[32mvalue\x1b[0m"}}
+        LoguruAdapter._format_extra(record)
+        assert "key" in record["extra_str"] and "value" in record["extra_str"]
+        # Injected codes (red \x1b[31m, green \x1b[32m) must be stripped
+        assert "\x1b[31m" not in record["extra_str"]
+        assert "\x1b[32m" not in record["extra_str"]
 
-        # Check for ANSI escape sequences
-        assert "\x1b[" in record["extra_str"]
-        assert adapter._MAGENTA in record["extra_str"]
-        assert adapter._RESET in record["extra_str"]
+    def test_handles_str_conversion_error_in_value(self) -> None:
+        """Objects raising on str() as values show <REPR_ERROR>."""
+
+        class BadStr:
+            def __str__(self) -> str:
+                raise ValueError
+
+        record: dict = {"extra": {"key": BadStr()}}
+        LoguruAdapter._format_extra(record)
+        assert "<REPR_ERROR>" in record["extra_str"]
+
+    def test_handles_str_conversion_error_in_key(self) -> None:
+        """Objects raising on str() as keys show <REPR_ERROR>."""
+
+        class BadStrKey:
+            def __str__(self) -> str:
+                raise ValueError
+
+            def __hash__(self) -> int:
+                return 42
+
+            def __eq__(self, other: object) -> bool:
+                return isinstance(other, BadStrKey)
+
+        record: dict = {"extra": {BadStrKey(): "value"}}
+        LoguruAdapter._format_extra(record)
+        assert "<REPR_ERROR>" in record["extra_str"]
+
+    def test_preserves_loguru_markup_literally(self) -> None:
+        """Loguru markup tags are not interpreted."""
+        record: dict = {"extra": {"x": "<red>text</red>"}}
+        LoguruAdapter._format_extra(record)
+        assert "<red>text</red>" in record["extra_str"]
 
 
-class TestLoggerModuleExport:
-    """Tests for the module-level logger export."""
+class TestStripAnsi:
+    """Tests for _strip_ansi static method."""
 
-    def test_logger_is_exported(self) -> None:
-        """Module exports a logger instance."""
-        from de_electricity_meteo.core.logger import logger  # noqa: PLC0415
+    @pytest.mark.parametrize(
+        ("input_text", "expected"),
+        [
+            ("normal text", "normal text"),
+            ("\x1b[31mred\x1b[0m", "red"),
+            ("\x1b[1m\x1b[32mbold green\x1b[0m", "bold green"),
+        ],
+    )
+    def test_strip_ansi(self, input_text: str, expected: str) -> None:
+        """ANSI sequences are removed, normal text preserved."""
+        assert LoguruAdapter._strip_ansi(input_text) == expected
 
-        assert logger is not None
+
+class TestModuleExport:
+    """Tests for module-level logger export."""
+
+    def test_logger_exported_and_functional(self) -> None:
+        """Module exports a functional LoguruAdapter instance."""
         assert isinstance(logger, LoguruAdapter)
-
-    def test_exported_logger_is_functional(self) -> None:
-        """Exported logger can log messages."""
-        from de_electricity_meteo.core.logger import logger  # noqa: PLC0415
-
-        # Should not raise
-        logger.info("Test message from exported logger", extra={"test": True})
+        logger.info("test", extra={"x": 1})  # Should not raise
