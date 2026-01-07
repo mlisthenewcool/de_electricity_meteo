@@ -15,6 +15,8 @@ Usage:
         logger.exception("Operation failed", extra={"context": "data_pipeline"})
 """
 
+from __future__ import annotations
+
 import re
 import sys
 from typing import Any
@@ -25,15 +27,17 @@ from de_electricity_meteo.config.settings import LOG_LEVEL
 
 
 class LoguruAdapter:
-    """Adapter to support standard library's extra={} pattern with Loguru.
+    """Adapter bridging standard library's extra={} pattern with Loguru's bind().
 
-    Loguru uses bind() for extra context, but many codebases use the standard
-    library's `logger.info("msg", extra={...})` syntax. This adapter bridges
-    the two approaches, allowing existing code to work without modification.
+    This is a singleton: multiple instantiations return the same instance.
+    Loguru is configured once on first instantiation.
 
     Attributes:
-        ANSI color codes for formatting extra fields in terminal output.
+        _instance: The singleton instance (class-level).
+        _ANSI_PATTERN: Compiled regex matching ANSI escape sequences.
     """
+
+    _instance: LoguruAdapter | None = None
 
     _MAGENTA = "\x1b[35m"
     _WHITE = "\x1b[37m"
@@ -43,19 +47,21 @@ class LoguruAdapter:
     _FORMAT = (
         "<green>{time:HH:mm:ss}</green> | "
         "<level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan> | "  # {line} {module}
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan> | "
         "<level>{message}</level>"
         "{extra_str}"
     )
 
-    def __init__(self, level: str = LOG_LEVEL) -> None:
-        """Initialize the adapter and configure Loguru.
+    def __new__(cls, level: str = LOG_LEVEL) -> LoguruAdapter:
+        """Return the singleton instance, creating it on first call."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._configure(level)
+        return cls._instance
 
-        Args:
-            level: Minimum log level to display. Defaults to LOG_LEVEL from settings.
-        """
+    def _configure(self, level: str) -> None:
+        """Configure Loguru (called once on singleton creation)."""
         _loguru_logger.remove()
-
         patched = _loguru_logger.patch(LoguruAdapter._format_extra)  # type: ignore[arg-type]
         patched.add(
             sys.stderr,
@@ -66,6 +72,11 @@ class LoguruAdapter:
             diagnose=True,
         )
         self._logger = patched
+
+    @classmethod
+    def _reset_for_tests(cls) -> None:
+        """Reset singleton state. For testing purposes only."""
+        cls._instance = None
 
     @staticmethod
     def _strip_ansi(text: str) -> str:
@@ -100,12 +111,12 @@ class LoguruAdapter:
         for k, v in extra.items():
             try:
                 v_safe = LoguruAdapter._strip_ansi(str(v))
-            except ValueError:
+            except Exception:  # maybe only ValueError, AttributeError ?
                 v_safe = "<REPR_ERROR>"
 
             try:
                 k_safe = LoguruAdapter._strip_ansi(str(k))
-            except ValueError:
+            except Exception:  # maybe only ValueError, AttributeError ?
                 k_safe = "<REPR_ERROR>"
 
             parts.append(
@@ -124,7 +135,7 @@ class LoguruAdapter:
             **kwargs: Optional 'extra' dict and 'exc_info' bool.
         """
         extra: dict[str, Any] = kwargs.pop("extra", {})
-        exc_info: bool = kwargs.pop("exc_info", False)
+        exc_info = kwargs.pop("exc_info", False)
 
         bound = self._logger.bind(**extra)
         log_method = getattr(bound.opt(depth=2, exception=exc_info), level)
@@ -157,7 +168,9 @@ class LoguruAdapter:
         """
         if sys.exc_info()[0] is None:
             kwargs["exc_info"] = False
-            kwargs["extra"] = {"note": "logger.exception() called without active exception"}
+            extra: dict[str, Any] = kwargs.get("extra", {})
+            extra["note"] = "logger.exception() called without active exception"
+            kwargs["extra"] = extra
         else:
             kwargs["exc_info"] = True
 

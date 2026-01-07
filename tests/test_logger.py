@@ -1,12 +1,27 @@
 """Tests for the Loguru-based logger module."""
 
+from typing import Any, Generator
+
 import pytest
 
 from de_electricity_meteo.core.logger import LoguruAdapter, logger
 
 
+@pytest.fixture(autouse=True)
+def isolate_singleton() -> Generator[None, None, None]:
+    """Reset singleton after each test for isolation."""
+    yield
+    LoguruAdapter._reset_for_tests()
+
+
 class TestLoguruAdapter:
     """Tests for LoguruAdapter initialization and log methods."""
+
+    def test_singleton_returns_same_instance(self) -> None:
+        """Multiple instantiations return the same instance."""
+        adapter1 = LoguruAdapter()
+        adapter2 = LoguruAdapter()
+        assert adapter1 is adapter2
 
     def test_invalid_level_raises(self) -> None:
         """Invalid log level raises ValueError."""
@@ -37,6 +52,14 @@ class TestLoguruAdapter:
         assert "no exception" in output
         assert "logger.exception() called without active exception" in output
 
+    def test_depth_shows_caller_location(self, capsys: pytest.CaptureFixture) -> None:
+        """Log output shows caller location, not internal logger.py functions."""
+        LoguruAdapter(level="DEBUG").info("depth test")
+        output = capsys.readouterr().err
+        # Should show test file/function, not logger internals
+        assert "test_logger" in output
+        assert "logger:_log" not in output
+
 
 class TestFormatExtra:
     """Tests for _format_extra static method."""
@@ -58,7 +81,7 @@ class TestFormatExtra:
 
         class BadStr:
             def __str__(self) -> str:
-                raise ValueError
+                raise Exception
 
             def __hash__(self) -> int:
                 return 42
@@ -72,9 +95,32 @@ class TestFormatExtra:
         assert "<REPR_ERROR>" in record["extra_str"]
 
         # Test key error
-        record = {"extra": {BadStr(): "value"}}
+        record: dict[str, Any] = {"extra": {BadStr(): "value"}}
         LoguruAdapter._format_extra(record)
         assert "<REPR_ERROR>" in record["extra_str"]
+
+    def test_handles_various_data_types(self) -> None:
+        """Extra handles None, lists, and nested dicts."""
+        record: dict = {
+            "extra": {
+                "none_val": None,
+                "list_val": [1, 2, 3],
+                "dict_val": {"nested": "value"},
+            }
+        }
+        LoguruAdapter._format_extra(record)
+        assert "None" in record["extra_str"]
+        assert "[1, 2, 3]" in record["extra_str"]
+        assert "nested" in record["extra_str"]
+
+    def test_all_keys_are_present(self) -> None:
+        """All extra keys are included in output."""
+        keys: list[str] = ["alpha", "beta", "gamma", "delta"]
+        record: dict[str, Any] = {"extra": {k: f"val_{k}" for k in keys}}
+        LoguruAdapter._format_extra(record)
+        for key in keys:
+            assert key in record["extra_str"]
+            assert f"val_{key}" in record["extra_str"]
 
 
 class TestStripAnsi:
