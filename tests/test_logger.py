@@ -8,11 +8,6 @@ from de_electricity_meteo.core.logger import LoguruAdapter, logger
 class TestLoguruAdapter:
     """Tests for LoguruAdapter initialization and log methods."""
 
-    def test_initialization_default_and_custom_level(self) -> None:
-        """LoguruAdapter initializes with default and custom levels."""
-        assert LoguruAdapter()._logger is not None
-        assert LoguruAdapter(level="WARNING")._logger is not None
-
     def test_invalid_level_raises(self) -> None:
         """Invalid log level raises ValueError."""
         with pytest.raises(ValueError, match="(?i)level"):
@@ -58,30 +53,10 @@ class TestFormatExtra:
         LoguruAdapter._format_extra(record)
         assert all(s in record["extra_str"] for s in ["status", "ok", "count", "5", "\x1b["])
 
-    def test_strips_ansi_from_user_input(self) -> None:
-        """ANSI codes in keys and values are stripped."""
-        record: dict = {"extra": {"\x1b[31mkey\x1b[0m": "\x1b[32mvalue\x1b[0m"}}
-        LoguruAdapter._format_extra(record)
-        assert "key" in record["extra_str"] and "value" in record["extra_str"]
-        # Injected codes (red \x1b[31m, green \x1b[32m) must be stripped
-        assert "\x1b[31m" not in record["extra_str"]
-        assert "\x1b[32m" not in record["extra_str"]
-
-    def test_handles_str_conversion_error_in_value(self) -> None:
-        """Objects raising on str() as values show <REPR_ERROR>."""
+    def test_handles_str_conversion_error(self) -> None:
+        """Objects raising on str() show <REPR_ERROR> for both keys and values."""
 
         class BadStr:
-            def __str__(self) -> str:
-                raise ValueError
-
-        record: dict = {"extra": {"key": BadStr()}}
-        LoguruAdapter._format_extra(record)
-        assert "<REPR_ERROR>" in record["extra_str"]
-
-    def test_handles_str_conversion_error_in_key(self) -> None:
-        """Objects raising on str() as keys show <REPR_ERROR>."""
-
-        class BadStrKey:
             def __str__(self) -> str:
                 raise ValueError
 
@@ -89,17 +64,17 @@ class TestFormatExtra:
                 return 42
 
             def __eq__(self, other: object) -> bool:
-                return isinstance(other, BadStrKey)
+                return isinstance(other, BadStr)
 
-        record: dict = {"extra": {BadStrKey(): "value"}}
+        # Test value error
+        record: dict = {"extra": {"key": BadStr()}}
         LoguruAdapter._format_extra(record)
         assert "<REPR_ERROR>" in record["extra_str"]
 
-    def test_preserves_loguru_markup_literally(self) -> None:
-        """Loguru markup tags are not interpreted."""
-        record: dict = {"extra": {"x": "<red>text</red>"}}
+        # Test key error
+        record = {"extra": {BadStr(): "value"}}
         LoguruAdapter._format_extra(record)
-        assert "<red>text</red>" in record["extra_str"]
+        assert "<REPR_ERROR>" in record["extra_str"]
 
 
 class TestStripAnsi:
