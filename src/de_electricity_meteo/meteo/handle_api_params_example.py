@@ -4,7 +4,7 @@ from pathlib import Path
 
 import aiohttp
 
-from de_electricity_meteo.logger import logger
+from de_electricity_meteo.core import logger
 
 
 async def fetch_electricity_data(

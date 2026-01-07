@@ -4,7 +4,7 @@ This module provides colored terminal logging with support for the standard
 library's extra={} pattern for compatibility with existing code.
 
 Usage:
-    from de_electricity_meteo.logger import logger
+    from de_electricity_meteo.core import logger
 
     logger.info("Download started", extra={"url": "https://example.com", "size": 1024})
     logger.error("Failed to connect", extra={"attempt": 3, "max_retries": 5})
@@ -41,7 +41,7 @@ class LoguruAdapter:
     _FORMAT = (
         "<green>{time:HH:mm:ss}</green> | "
         "<level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan> | "  # {line} {module}
         "<level>{message}</level>"
         "{extra_str}"
     )

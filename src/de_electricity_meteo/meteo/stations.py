@@ -28,8 +28,7 @@ import aiohttp
 import polars as pl
 
 from de_electricity_meteo.config.paths import METEO_FRANCE_INFO_STATIONS_BRONZE
-from de_electricity_meteo.downloader import download_to_file
-from de_electricity_meteo.logger import logger
+from de_electricity_meteo.core import download_to_file, logger
 
 DOWNLOAD_INFO_STATIONS_URL = (
     "https://www.data.gouv.fr/api/1/datasets/r/1fe544d8-4615-4642-a307-5956a7d90922"

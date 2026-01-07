@@ -12,19 +12,17 @@ import aiohttp
 import pytest
 from pytest_mock import MockerFixture
 
-from de_electricity_meteo.downloader import (
+from de_electricity_meteo.core import (
+    ArchiveNotFoundError,
+    ExistingFileAction,
+    FileIntegrityError,
+    FileNotFoundInArchiveError,
+    RetryExhaustedError,
     download_to_file,
     extract_7z_async,
     extract_7z_sync,
     stream_retry,
     validate_sqlite_header,
-)
-from de_electricity_meteo.enums import ExistingFileAction
-from de_electricity_meteo.exceptions import (
-    ArchiveNotFoundError,
-    FileIntegrityError,
-    FileNotFoundInArchiveError,
-    RetryExhaustedError,
 )
 
 # Test constants to avoid magic numbers
@@ -213,7 +211,7 @@ class TestExtract7zSync:
         mock_archive.__exit__ = MagicMock(return_value=False)
 
         mocker.patch(
-            "de_electricity_meteo.downloader.py7zr.SevenZipFile", return_value=mock_archive
+            "de_electricity_meteo.core.downloader.py7zr.SevenZipFile", return_value=mock_archive
         )
 
         with pytest.raises(FileNotFoundInArchiveError) as exc_info:
@@ -230,7 +228,7 @@ class TestExtract7zSync:
         dest.touch()  # File already exists
 
         # py7zr should never be called
-        mock_sevenzipfile = mocker.patch("de_electricity_meteo.downloader.py7zr.SevenZipFile")
+        mock_sevenzipfile = mocker.patch("de_electricity_meteo.core.downloader.py7zr.SevenZipFile")
 
         extract_7z_sync(archive, "file.gpkg", dest, if_exists=ExistingFileAction.SKIP)
 
@@ -265,7 +263,7 @@ class TestExtract7zSync:
         mock_archive.__exit__ = MagicMock(return_value=False)
 
         mocker.patch(
-            "de_electricity_meteo.downloader.py7zr.SevenZipFile", return_value=mock_archive
+            "de_electricity_meteo.core.downloader.py7zr.SevenZipFile", return_value=mock_archive
         )
 
         extract_7z_sync(archive, "iris.gpkg", dest)
@@ -291,7 +289,7 @@ class TestExtract7zSync:
         mock_archive.__exit__ = MagicMock(return_value=False)
 
         mocker.patch(
-            "de_electricity_meteo.downloader.py7zr.SevenZipFile", return_value=mock_archive
+            "de_electricity_meteo.core.downloader.py7zr.SevenZipFile", return_value=mock_archive
         )
 
         with pytest.raises(FileIntegrityError):
@@ -318,7 +316,7 @@ class TestExtract7zSync:
         mock_archive.__exit__ = MagicMock(return_value=False)
 
         mocker.patch(
-            "de_electricity_meteo.downloader.py7zr.SevenZipFile", return_value=mock_archive
+            "de_electricity_meteo.core.downloader.py7zr.SevenZipFile", return_value=mock_archive
         )
 
         # Should not raise even though it's not a SQLite file
@@ -337,7 +335,7 @@ class TestExtract7zAsync:
         dest = tmp_path / "output.gpkg"
 
         mock_sync = mocker.patch(
-            "de_electricity_meteo.downloader.extract_7z_sync",
+            "de_electricity_meteo.core.downloader.extract_7z_sync",
             return_value=None,
         )
 
@@ -390,7 +388,7 @@ class TestDownloadToFile:
         mock_session.get = MagicMock(return_value=mock_response)
 
         # Disable tqdm for cleaner test output
-        mocker.patch("de_electricity_meteo.downloader.tqdm", return_value=MagicMock())
+        mocker.patch("de_electricity_meteo.core.downloader.tqdm", return_value=MagicMock())
 
         result = await download_to_file(mock_session, "https://example.com/file", dest)
 
@@ -418,7 +416,7 @@ class TestDownloadToFile:
         mock_session = MagicMock()
         mock_session.get = MagicMock(return_value=mock_response)
 
-        mocker.patch("de_electricity_meteo.downloader.tqdm", return_value=MagicMock())
+        mocker.patch("de_electricity_meteo.core.downloader.tqdm", return_value=MagicMock())
 
         await download_to_file(mock_session, "https://example.com/file", dest)
 

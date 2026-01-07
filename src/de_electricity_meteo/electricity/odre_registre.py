@@ -7,8 +7,7 @@ import polars as pl
 from de_electricity_meteo.config.paths import (
     ODRE_REGISTRE_NATIONAL_INSTALLATIONS_BRONZE,
 )
-from de_electricity_meteo.downloader import download_to_file
-from de_electricity_meteo.logger import logger
+from de_electricity_meteo.core import download_to_file, logger
 
 DOWNLOAD_URL = "https://odre.opendatasoft.com/api/explore/v2.1/catalog/datasets/registre-national-installation-production-stockage-electricite-agrege/exports/parquet?lang=fr&timezone=Europe%2FBerlin"
 

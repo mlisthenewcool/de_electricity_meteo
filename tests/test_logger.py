@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from de_electricity_meteo.logger import LoguruAdapter
+from de_electricity_meteo.core.logger import LoguruAdapter
 
 
 class TestLoguruAdapter:
@@ -123,14 +123,14 @@ class TestLoggerModuleExport:
 
     def test_logger_is_exported(self) -> None:
         """Module exports a logger instance."""
-        from de_electricity_meteo.logger import logger  # noqa: PLC0415
+        from de_electricity_meteo.core.logger import logger  # noqa: PLC0415
 
         assert logger is not None
         assert isinstance(logger, LoguruAdapter)
 
     def test_exported_logger_is_functional(self) -> None:
         """Exported logger can log messages."""
-        from de_electricity_meteo.logger import logger  # noqa: PLC0415
+        from de_electricity_meteo.core.logger import logger  # noqa: PLC0415
 
         # Should not raise
         logger.info("Test message from exported logger", extra={"test": True})
